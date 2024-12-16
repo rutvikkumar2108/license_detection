@@ -1,10 +1,10 @@
-import cv2
 import numpy as np
 from ultralytics import YOLO
 from paddleocr import PaddleOCR
 import re
 import base64
 from collections import Counter
+from PIL import Image, ImageDraw, ImageFont
 
 # Initialize the OCR engine
 ocr = PaddleOCR(lang="en")
@@ -38,208 +38,6 @@ def extract_text_paddleocr(image):
 # Load models
 coco_model = YOLO('yolov8n.pt')  # COCO model for vehicle detection
 license_plate_detector = YOLO('license_plate_detector.pt')  # Custom license plate detection model
-#
-# def process_frame(frame, timestamp):
-#     height, width, _ = frame.shape
-#
-#     # Detect vehicles using COCO model
-#     vehicle_classes = {
-#         2: 'car',
-#         3: 'motorcycle',
-#         5: 'bus',
-#         7: 'truck'
-#     }  # COCO class IDs for vehicles
-#     vehicle_detections = coco_model(frame)[0]
-#
-#     # Group vehicle detections by class
-#     vehicle_boxes_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
-#     for x1, y1, x2, y2, score, class_id in vehicle_detections.boxes.data.tolist():
-#         if int(class_id) in vehicle_classes and score > 0.5:  # Confidence threshold
-#             vehicle_type = vehicle_classes[int(class_id)]
-#             vehicle_boxes_by_type[vehicle_type].append([int(x1), int(y1), int(x2), int(y2)])
-#
-#     # Initialize detected license plates with timestamps
-#     detected_plates_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
-#
-#     # Detect license plates using the license plate detector model
-#     license_plate_detections = license_plate_detector(frame)[0]
-#     for x1, y1, x2, y2, score, class_id in license_plate_detections.boxes.data.tolist():
-#         if score > 0.5:  # Confidence threshold
-#             # Crop the license plate from the frame
-#             crop_img = frame[int(y1):int(y2), int(x1):int(x2)]
-#
-#             # Check if the cropped image is valid
-#             if crop_img is not None and crop_img.size > 0:
-#                 plate_text = extract_text_paddleocr(crop_img)  # Use PaddleOCR for text extraction
-#                 if plate_text:
-#                     # Assign the license plate to the closest vehicle type
-#                     for vehicle_type, boxes in vehicle_boxes_by_type.items():
-#                         for box in boxes:
-#                             if (
-#                                 int(x1) >= box[0]
-#                                 and int(y1) >= box[1]
-#                                 and int(x2) <= box[2]
-#                                 and int(y2) <= box[3]
-#                             ):
-#                                 detected_plates_by_type[vehicle_type].append(
-#                                     {'plate': plate_text[0], 'timestamp': timestamp}
-#                                 )
-#
-#     return detected_plates_by_type
-
-def encode_frame(frame):
-    """
-    Encode a frame as a base64 string for JSON serialization.
-    """
-    _, buffer = cv2.imencode('.jpg', frame)
-    return base64.b64encode(buffer).decode('utf-8')
-
-# def process_frame(frame, timestamp):
-#     """
-#     Process a video frame to detect vehicles and license plates, and return the results.
-#
-#     Args:
-#         frame (numpy.ndarray): The video frame to process.
-#         timestamp (float): The timestamp of the frame in seconds.
-#
-#     Returns:
-#         tuple: A dictionary of detected plates by vehicle type and the frame encoded as a base64 string.
-#     """
-#     height, width, _ = frame.shape
-#
-#     # Detect vehicles using COCO model
-#     vehicle_classes = {
-#         2: 'car',
-#         3: 'motorcycle',
-#         5: 'bus',
-#         7: 'truck'
-#     }  # COCO class IDs for vehicles
-#     vehicle_detections = coco_model(frame)[0]
-#
-#     # Group vehicle detections by class
-#     vehicle_boxes_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
-#     for x1, y1, x2, y2, score, class_id in vehicle_detections.boxes.data.tolist():
-#         if int(class_id) in vehicle_classes and score > 0.5:  # Confidence threshold
-#             vehicle_type = vehicle_classes[int(class_id)]
-#             vehicle_boxes_by_type[vehicle_type].append([int(x1), int(y1), int(x2), int(y2)])
-#
-#     # Initialize detected license plates with timestamps
-#     detected_plates_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
-#
-#     # Detect license plates using the license plate detector model
-#     license_plate_detections = license_plate_detector(frame)[0]
-#     for x1, y1, x2, y2, score, class_id in license_plate_detections.boxes.data.tolist():
-#         if score > 0.5:  # Confidence threshold
-#             # Crop the license plate from the frame
-#             crop_img = frame[int(y1):int(y2), int(x1):int(x2)]
-#
-#             # Check if the cropped image is valid
-#             if crop_img is not None and crop_img.size > 0:
-#                 plate_text = extract_text_paddleocr(crop_img)  # Use PaddleOCR for text extraction
-#                 if plate_text:
-#                     # Assign the license plate to the closest vehicle type
-#                     for vehicle_type, boxes in vehicle_boxes_by_type.items():
-#                         for box in boxes:
-#                             if (
-#                                 int(x1) >= box[0]
-#                                 and int(y1) >= box[1]
-#                                 and int(x2) <= box[2]
-#                                 and int(y2) <= box[3]
-#                             ):
-#                                 detected_plates_by_type[vehicle_type].append(
-#                                     {'plate': plate_text[0], 'timestamp': timestamp}
-#                                 )
-#
-#     # Encode the frame as a base64 string
-#     encoded_frame = encode_frame(frame)
-#
-#     return detected_plates_by_type, encoded_frame
-
-
-# def process_frame(frame, timestamp):
-#     """
-#     Process a video frame to detect vehicles and license plates, draw bounding boxes, and return the results.
-#
-#     Args:
-#         frame (numpy.ndarray): The video frame to process.
-#         timestamp (float): The timestamp of the frame in seconds.
-#
-#     Returns:
-#         tuple: A dictionary of detected plates by vehicle type and the processed frame with bounding boxes.
-#     """
-#     height, width, _ = frame.shape
-#
-#     # Detect vehicles using COCO model
-#     vehicle_classes = {
-#         2: 'car',
-#         3: 'motorcycle',
-#         5: 'bus',
-#         7: 'truck'
-#     }  # COCO class IDs for vehicles
-#     vehicle_detections = coco_model(frame)[0]
-#
-#     # Group vehicle detections by class
-#     vehicle_boxes_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
-#     for x1, y1, x2, y2, score, class_id in vehicle_detections.boxes.data.tolist():
-#         if int(class_id) in vehicle_classes and score > 0.5:  # Confidence threshold
-#             vehicle_type = vehicle_classes[int(class_id)]
-#             vehicle_boxes_by_type[vehicle_type].append([int(x1), int(y1), int(x2), int(y2)])
-#
-#             # Draw blue bounding box for vehicle
-#             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
-#             cv2.putText(frame, vehicle_type.capitalize(), (int(x1), int(y1) - 10),
-#                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-#
-#     # Initialize detected license plates with timestamps
-#     detected_plates_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
-#
-#     # Detect license plates using the license plate detector model
-#     license_plate_detections = license_plate_detector(frame)[0]
-#     detected_license_boxes = []  # Keep track of license plate bounding boxes
-#     for x1, y1, x2, y2, score, class_id in license_plate_detections.boxes.data.tolist():
-#         if score > 0.5:  # Confidence threshold
-#             # Crop the license plate from the frame
-#             crop_img = frame[int(y1):int(y2), int(x1):int(x2)]
-#
-#             # Check if the cropped image is valid
-#             if crop_img is not None and crop_img.size > 0:
-#                 plate_text = extract_text_paddleocr(crop_img)  # Use PaddleOCR for text extraction
-#                 if plate_text:
-#                     detected_license_boxes.append([int(x1), int(y1), int(x2), int(y2)])
-#                     # Assign the license plate to the closest vehicle type
-#                     for vehicle_type, boxes in vehicle_boxes_by_type.items():
-#                         for box in boxes:
-#                             if (
-#                                 int(x1) >= box[0]
-#                                 and int(y1) >= box[1]
-#                                 and int(x2) <= box[2]
-#                                 and int(y2) <= box[3]
-#                             ):
-#                                 detected_plates_by_type[vehicle_type].append(
-#                                     {'plate': plate_text[0], 'timestamp': timestamp}
-#                                 )
-#
-#                     # Draw red bounding box for license plate
-#                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-#                     cv2.putText(frame, plate_text[0], (int(x1), int(y2) + 20),
-#                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-#
-#     # Add vehicles without detected license plates
-#     for vehicle_type, boxes in vehicle_boxes_by_type.items():
-#         for box in boxes:
-#             # Check if the box overlaps with any detected license plate box
-#             overlaps = any(
-#                 box[0] <= plate_box[2] and box[2] >= plate_box[0] and
-#                 box[1] <= plate_box[3] and box[3] >= plate_box[1]
-#                 for plate_box in detected_license_boxes
-#             )
-#             if not overlaps:
-#                 # No overlapping license plate detected
-#                 detected_plates_by_type[vehicle_type].append(
-#                     {'plate': '', 'timestamp': timestamp}
-#                 )
-#
-#     return detected_plates_by_type, frame
 
 def process_frame(frame, timestamp):
     """
@@ -252,6 +50,10 @@ def process_frame(frame, timestamp):
     Returns:
         tuple: A dictionary of detected plates by vehicle type and the processed frame with bounding boxes.
     """
+    # Convert numpy array (OpenCV) frame to PIL Image
+    pil_image = Image.fromarray(frame)
+    draw = ImageDraw.Draw(pil_image)
+
     height, width, _ = frame.shape
 
     # Detect vehicles using COCO model
@@ -271,9 +73,14 @@ def process_frame(frame, timestamp):
             vehicle_boxes_by_type[vehicle_type].append([int(x1), int(y1), int(x2), int(y2)])
 
             # Draw blue bounding box for vehicle
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
-            cv2.putText(frame, vehicle_type.capitalize(), (int(x1), int(y1) - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            draw.rectangle([int(x1), int(y1), int(x2), int(y2)], outline="red", width=2)
+
+            # Load a smaller font for the vehicle type text
+            font = ImageFont.load_default()  # You can use a custom font here if you prefer
+            text = vehicle_type.capitalize()
+
+            # Draw vehicle type text
+            draw.text((int(x1), int(y1) - 10), text, fill="red", font=font)
 
     # Initialize detected license plates
     detected_plates_by_type = {vehicle: [] for vehicle in vehicle_classes.values()}
@@ -306,9 +113,13 @@ def process_frame(frame, timestamp):
                             })
 
                             # Draw a red bounding box for the license plate
-                            cv2.rectangle(frame, (int(lx1), int(ly1)), (int(lx2), int(ly2)), (0, 0, 255), 2)
-                            cv2.putText(frame, plate_text[0], (int(lx1), int(ly2) + 20),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                            draw.rectangle([int(lx1), int(ly1), int(lx2), int(ly2)], outline="blue", width=2)
+
+                            # Load a larger font for the license plate text
+                            font_large = ImageFont.truetype("arial.ttf", size=20)  # Adjust the size as needed
+
+                            # Draw the plate text with larger font
+                            draw.text((int(lx1), int(ly2) + 20), plate_text[0], fill="blue", font=font_large)
 
             # If no license plate is detected, record the vehicle with an empty plate
             if not detected_plates_by_type[vehicle_type]:
@@ -317,7 +128,10 @@ def process_frame(frame, timestamp):
                     'timestamp': timestamp
                 })
 
-    return detected_plates_by_type, frame
+    # Convert the PIL image back to a numpy array
+    frame_with_boxes = np.array(pil_image)
+
+    return detected_plates_by_type, frame_with_boxes
 
 
 def validate_license_plates(plates, threshold=1):
