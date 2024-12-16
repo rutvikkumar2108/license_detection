@@ -1,5 +1,6 @@
 import streamlit as st
-import cv2
+from moviepy.video.io.VideoFileClip import VideoFileClip
+from PIL import Image
 import os
 import numpy as np
 from car_license_plate_detection import process_frame
@@ -14,26 +15,25 @@ def process_video(file_path):
     Returns:
         list: A list of dictionaries, each containing a frame, timestamp, and detected vehicles with license plates.
     """
-    cap = cv2.VideoCapture(file_path)
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    frame_skip = max(1, fps // 5)  # Process approximately 5 FPS
+    clip = VideoFileClip(file_path)
+    fps = clip.fps
+    frame_skip = max(1, int(fps // 5))  # Process approximately 5 FPS
     frame_count = 0
     results = []
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        # Skip frames
+    # Loop through video frames
+    for frame in clip.iter_frames(fps=fps, dtype="uint8"):
         frame_count += 1
         if frame_count % frame_skip != 0:
             continue
 
         timestamp = frame_count / fps
 
+        # Convert to PIL Image
+        pil_frame = Image.fromarray(frame)
+
         # Process the frame and get detected vehicles and processed frame
-        detected_plates_by_type, processed_frame = process_frame(frame, timestamp)
+        detected_plates_by_type, processed_frame = process_frame(np.array(pil_frame), timestamp)
 
         # Gather all detected vehicles and their plates for the current frame
         detected_vehicles = []
@@ -46,12 +46,11 @@ def process_video(file_path):
 
         # Append the frame, timestamp, and detected vehicle details
         results.append({
-            'frame': processed_frame,  # Processed frame with bounding boxes
+            'frame': np.array(processed_frame),  # Processed frame with bounding boxes
             'timestamp': timestamp,
             'detected_vehicles': detected_vehicles
         })
 
-    cap.release()
     return results
 
 # Streamlit app layout
@@ -74,7 +73,7 @@ if uploaded_file is not None:
         # Display the results
         for result in results:
             # Display the frame with timestamp
-            st.image(result['frame'], caption=f"Frame at {result['timestamp']:.2f} seconds", channels="BGR")
+            st.image(result['frame'], caption=f"Frame at {result['timestamp']:.2f} seconds", channels="RGB")
             st.write(f"**Timestamp**: {result['timestamp']:.2f} seconds")
 
             # Display detected vehicles and their license plates
