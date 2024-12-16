@@ -4,3 +4,4 @@ ultralytics
 paddleocr
 paddlepaddle
 moviepy
+distutils
